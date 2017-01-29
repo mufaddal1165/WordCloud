@@ -35,12 +35,14 @@ def get_text_from_tweets(tweets):
 
 def clean_tweets_text(tweets_text):
     # remvoe digits and special characters
-    tweets_without_digits= map(lambda expr:re.sub('\d|#|@|%','',expr),tweets_text)
-    tweets_small_case = map(lambda expr:expr.lower(),tweets_without_digits)
+    tweets_without_digits= map(lambda expr:re.sub('\d|#|@|%|$|_|\?','',expr),tweets_text)
+    tweets_period_adjust = map(lambda expr:re.sub('\.','. ',expr),tweets_without_digits)
+    tweets_small_case = map(lambda expr:expr.lower(),tweets_period_adjust)
     clean_tweets = []
     for tweet in tweets_small_case:
         #removes URL from tweets
-        idx = re.search('http|fb.|pic.twitter', tweet, flags=0)
+        #gap has been introduced after 'pic.' to settle for the space introduced after tweets_period_adjust 
+        idx = re.search('http|fb.|pic. twitter', tweet, flags=0)
         if idx == None:
             clean_tweets.append(tweet)
         else:
