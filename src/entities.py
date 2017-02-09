@@ -23,23 +23,25 @@ def get_collocations(doc):
     return (bigram_finder.nbest(bigram_measures.pmi,5),trigram_finder.nbest(trigram_measures.pmi,5))
 
 def get_assoc(df,entity,corpus):
+    """
+    gets associations of every entity and saves them in a dictionary 'assos_list'
+    watson.get_keywords() send request to watson.
+
+    """
     assoc_list = []
     try:
         docs_vector = df.xs(entity)
         docs_with_entity = docs_vector.nonzero()
         print(docs_with_entity)
+        str_docs_with_entity = ""
         for doc in docs_with_entity[0]:
-            # words_present = df.xs(doc, axis=1)
-            # print(words_present[words_present==1].index)
-            # bigram,trigram = get_collocations(corpus[doc])
-            # print(bigram)
-            # print(trigram)
-            api_response = watson.get_keywords(corpus[doc])
-            if api_response['status'] == "OK":
-                keywords = api_response['keywords']
-                for keywordObj in keywords:
-                    assoc_list.append({"word":keywordObj['text'],"sentiment":keywordObj['sentiment']})
-        
+            str_docs_with_entity += ". "+corpus[doc]
+        api_response = watson.get_keywords(str_docs_with_entity)
+        if api_response['status'] == "OK":
+            keywords = api_response['keywords']
+            for keywordObj in keywords:
+                assoc_list.append({"word":keywordObj['text'],"sentiment":keywordObj['sentiment']})
+
     except Exception as e:
         print(e)
     return assoc_list
@@ -55,10 +57,10 @@ df.to_csv(path_or_buf='tdm.csv', sep=",", na_rep='', float_format=None, columns=
 with open('../watson_results/results_sample.json', mode='r') as fp:
     obj = json.load(fp)
 fp.close()
-with open('../watson_results/word_cloud.jsonl',mode='w') as fp:
+with open('../watson_results/word_cloud_trial.jsonl',mode='w') as fp:
 
     entities = obj['entities']
-    for entity in entities:
+    for entity in entities[:2]:
         if int(entity['count']) > 0:
             ent = entity['text']
             print(entity['count']," : ",ent)
@@ -70,7 +72,7 @@ with open('../watson_results/word_cloud.jsonl',mode='w') as fp:
             else:
                 entity['assoc'] = get_assoc(df,ent,corpus)
             json.dump(entity, fp)
-            json.dump('\n',fp)
+            fp.write('\n')
 fp.close()
 
 # print(get_assoc(df, 'thursday',corpus))

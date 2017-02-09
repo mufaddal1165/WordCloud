@@ -6,8 +6,9 @@ from urllib2 import quote
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
 import sys
+import argparse
 
-def fetch_tweets(filename, query):
+def fetch_tweets(filename, query, overwrite=True):
     query = quote(query.encode('utf-8'), safe='/)(')
     init_url = 'https://twitter.com/search?q={}&src=typd'.format(query)
     loop_url = 'https://twitter.com/i/search/timeline?vertical=default&q={}&src=typd&include_available_features=1&include_entities=1&reset_error_state=false'.format(query)
@@ -28,8 +29,14 @@ def fetch_tweets(filename, query):
 
     # get tweets
     tweets = parse_tweets(body)
-    with open(filename, 'w') as f:
+    if overwrite:
+        mode = 'w'
+    else:
+        mode = 'a'
+    with open(filename, mode) as f:
         f.write(json.dumps(tweets) + '\n')
+
+    total = len(tweets)
 
     # loop for further tweets
     while next_id != min_id:
@@ -42,19 +49,19 @@ def fetch_tweets(filename, query):
             print 'Parsing.'
             min_id = body[u'min_position']
             html = body[u'items_html']
-            new_tweets = parse_tweets(html)
+            tweets = parse_tweets(html)
             with open(filename, 'a') as f:
-                f.write(json.dumps(new_tweets) + '\n')
-            tweets = tweets + new_tweets
-            print 'Tweet count: {}'.format(len(tweets))
+                f.write(json.dumps(tweets) + '\n')
+            total += len(tweets)
+            print 'Tweet count: {}'.format(total)
 
         except requests.exceptions.RequestException as e:
             print e
-            print('Error occurred. Oldest stored tweet: {}\n. Trying again...'.format(min_id))
+            print('Error occurred. Oldest stored tweet: {}\nTrying again...'.format(min_id))
             next_id = temp
 
 
-    return len(tweets)
+    return total
 
 
 def parse_tweets(string):
@@ -96,6 +103,11 @@ def get_time(tweet):
 
 
 if __name__ == '__main__':
-    query = sys.argv[1]
-    filename = sys.argv[2]
-    print 'Total tweets fetched: {}'.format(fetch_tweets(filename, query))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('query')
+    parser.add_argument('filename')
+    parser.add_argument('-a', '--append', help='append to file if it exists', action='store_true')
+    args = parser.parse_args()
+    query = args.query
+    filename = args.filename
+    print 'Total tweets fetched: {}'.format(fetch_tweets(filename, query, not (args.append)))
